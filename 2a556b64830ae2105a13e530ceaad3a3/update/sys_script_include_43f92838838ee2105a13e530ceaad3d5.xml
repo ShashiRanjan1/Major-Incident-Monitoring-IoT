@@ -14,8 +14,8 @@ httpCallTuya.prototype = {
     initialize: function() {},
 
     getToken: function() {
-        var clientId = "qs45p9dxjyxvqeg9r7n7";
-        var secret = "dc181cd3047540c9b3c44c6074eb7b1a";
+        var clientId = gs.getProperty('x_60748_monitoring.x_tuya.client_id');
+        var secret = gs.getProperty('x_60748_monitoring.x_tuya.client_secret');
         var method = "GET";
         var pathWithQuery = "/v1.0/token?grant_type=1";
         var timestamp = new Date().getTime();
@@ -39,15 +39,18 @@ httpCallTuya.prototype = {
         var response = r.execute();
         var responseBody = response.getBody();
         var httpStatus = response.getStatusCode();
-        return responseBody;
+		var token = JSON.parse(responseBody).result.access_token;
+		gs.setProperty('x_60748_monitoring.x_tuya.access_token',token);
+        return token;
         // return JSON.parse(responseBody).result.access_token;
     },
 
     commandCall: function(body) {
-        var clientId = "qs45p9dxjyxvqeg9r7n7";
-        var secret = "dc181cd3047540c9b3c44c6074eb7b1a";
+
+		var accessToken = gs.getProperty('x_60748_monitoring.x_tuya.access_token');
+        var clientId = gs.getProperty('x_60748_monitoring.x_tuya.client_id');
+        var secret = gs.getProperty('x_60748_monitoring.x_tuya.client_secret');
         var method = "POST";
-        var accessToken = "d03f7d2d3b540dd635ae6af191fb41ca";
         var pathWithQuery = "/v1.0/devices/bfe5ea90d59b7e8479rnza/commands";
         var timestamp = new Date().getTime();
 
@@ -86,14 +89,14 @@ httpCallTuya.prototype = {
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2025-06-07 17:54:47</sys_created_on>
         <sys_id>43f92838838ee2105a13e530ceaad3d5</sys_id>
-        <sys_mod_count>5</sys_mod_count>
+        <sys_mod_count>10</sys_mod_count>
         <sys_name>httpCallTuya</sys_name>
         <sys_package display_value="Monitoring" source="x_60748_monitoring">2a556b64830ae2105a13e530ceaad3a3</sys_package>
         <sys_policy>read</sys_policy>
         <sys_scope display_value="Monitoring">2a556b64830ae2105a13e530ceaad3a3</sys_scope>
         <sys_update_name>sys_script_include_43f92838838ee2105a13e530ceaad3d5</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2025-06-07 20:54:40</sys_updated_on>
+        <sys_updated_on>2025-06-09 10:40:42</sys_updated_on>
     </sys_script_include>
     <sys_es_latest_script action="INSERT_OR_UPDATE">
         <id>43f92838838ee2105a13e530ceaad3d5</id>
