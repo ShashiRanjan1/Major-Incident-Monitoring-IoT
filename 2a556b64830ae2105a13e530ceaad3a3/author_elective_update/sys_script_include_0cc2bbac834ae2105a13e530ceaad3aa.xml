@@ -1,0 +1,490 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
+    <sys_script_include action="DELETE">
+        <access>public</access>
+        <active>true</active>
+        <api_name>x_60748_monitoring.SignatureUtil</api_name>
+        <caller_access>2</caller_access>
+        <client_callable>false</client_callable>
+        <description/>
+        <mobile_callable>false</mobile_callable>
+        <name>SignatureUtil</name>
+        <sandbox_callable>false</sandbox_callable>
+        <script><![CDATA[var SignatureUtil = Class.create();
+SignatureUtil.prototype = {
+    initialize: function() {
+        this.cryptoUtil = new x_60748_monitoring.PureCryptoUtil();
+    },
+
+    generateTimestamp: function() {
+        return new Date().getTime();
+    },
+
+    /**
+     * Main function to generate the signature and signed URL
+     * @param {Object} request - An object representing the request info:
+     *   {
+     *     clientId: string,
+     *     secret: string,
+     *     accessToken: string (optional),
+     *     method: string (e.g. "GET"),
+     *     queryParams: Array of {key,value,disabled} objects,
+     *     body: Object containing mode and data (formdata/urlencoded/raw),
+     *     headers: Array of {key,value,disabled} objects,
+     *     urlPath: Array of strings (path segments),
+     *     urlVariables: Map of path variable substitutions {varName: value}
+     *   }
+     * @returns {Object} { signature: string, signedUrl: string, timestamp: number }
+     */
+    generateSignature: function(request) {
+        var timestamp = this.generateTimestamp();
+        var clientId = request.clientId;
+        var secret = request.secret;
+        var accessToken = request.accessToken || "";
+        var method = request.method.toUpperCase();
+        var query = request.queryParams || [];
+        var body = request.body || {};
+        var headers = request.headers || [];
+        var urlPath = request.urlPath || [];
+        var urlVariables = request.urlVariables || {};
+
+        var signMap = this.stringToSign(query, body, method, headers, urlPath, urlVariables);
+        var urlStr = signMap.url;
+        var signStr = signMap.signUrl;
+
+        var nonce = "";
+        for (var i = 0; i < headers.length; i++) {
+            var h = headers[i];
+            if (h.key.toLowerCase() === "nonce" && !h.disabled) {
+                nonce = h.value;
+                break;
+            }
+        }
+
+        var sign = this.calcSign(clientId, timestamp, nonce, signStr, secret);
+
+        return {
+            signature: sign,
+            signedUrl: urlStr,
+            timestamp: timestamp
+        };
+    },
+
+    /**
+     * Calculates the HMAC-SHA256 signature using PureCryptoUtil
+     */
+    calcSign: function(clientId, timestamp, nonce, signStr, secret) {
+        var strToSign = clientId + timestamp + nonce + signStr;
+        // Using PureCryptoUtil for HMAC-SHA256, output uppercase hex string
+        var hmac = this.cryptoUtil.hmacSha256(secret, strToSign);
+        return hmac.toUpperCase();
+    },
+
+    /**
+     * Builds the string to sign and URL based on request parts
+     */
+    stringToSign: function(query, body, method, headers, urlPath, urlVariables) {
+        var url = "";
+        var headersStr = "";
+        var map = {};
+        var arr = [];
+        var bodyStr = "";
+
+        if (query && query.length > 0) {
+            this.toJsonObj(query, arr, map);
+        }
+
+        if (body && body.mode) {
+            if (body.mode !== "formdata" && body.mode !== "urlencoded") {
+                bodyStr = this.replaceParams(body.raw || "");
+            } else if (body.mode === "formdata" || body.mode === "urlencoded") {
+                this.toJsonObj(body[body.mode] || [], arr, map);
+            }
+        }
+
+        var sha256Body = this.cryptoUtil.sha256(bodyStr);
+
+        arr.sort();
+        for (var i = 0; i < arr.length; i++) {
+            var key = arr[i];
+            url += key + "=" + map[key] + "&";
+        }
+        if (url.length > 0) {
+            url = url.slice(0, -1); // remove last &
+            url = "/" + urlPath.join("/") + "?" + url;
+        } else {
+            url = "/" + urlPath.join("/");
+        }
+
+        // Signature-Headers processing
+        var sigHeadersVal = "";
+        for (var j = 0; j < headers.length; j++) {
+            if (headers[j].key.toLowerCase() === "signature-headers" && !headers[j].disabled) {
+                sigHeadersVal = headers[j].value;
+                break;
+            }
+        }
+        if (sigHeadersVal) {
+            var signHeaderKeys = sigHeadersVal.split(":");
+            for (var k = 0; k < signHeaderKeys.length; k++) {
+                var key = signHeaderKeys[k];
+                var val = "";
+                if (this.isSelected(headers, key)) {
+                    for (var hIdx = 0; hIdx < headers.length; hIdx++) {
+                        var hItem = headers[hIdx];
+                        if (hItem.key === key && !hItem.disabled) {
+                            val = hItem.value;
+                            break;
+                        }
+                    }
+                }
+                headersStr += key + ":" + val + "\n";
+            }
+        }
+
+        url = this.replaceUrlParams(url, urlVariables);
+
+        var signUrl = method + "\n" + sha256Body + "\n" + headersStr + "\n" + url;
+
+        return {
+            signUrl: signUrl,
+            url: url
+        };
+    },
+
+    /**
+     * Check if header is selected (not disabled)
+     */
+    isSelected: function(headers, key) {
+        for (var i = 0; i < headers.length; i++) {
+            if (headers[i].key === key && headers[i].disabled) {
+                return false;
+            }
+        }
+        return true;
+    },
+
+    /**
+     * Replace params in string like {{param}} with environment values
+     * Here simplified: you can implement your own env lookup or pass map
+     */
+    replaceParams: function(str) {
+        // Implement your param replace logic here if needed
+        // For example, no environment in SN so just return str as is
+        return str;
+    },
+
+    /**
+     * Replace URL variables like :id with values from urlVariables map
+     */
+    replaceUrlParams: function(url, urlVariables) {
+        if (!urlVariables) return url;
+
+        // Replace {{var}} syntax
+        var result = url;
+        var pattern = /\{\{([^}]+)\}\}/g;
+        result = result.replace(pattern, function(match, p1) {
+            return urlVariables[p1] || "";
+        });
+
+        // Replace :var syntax
+        var colonPattern = /:([^\/\?]+)/g;
+        result = result.replace(colonPattern, function(match, p1) {
+            return urlVariables[p1] || "";
+        });
+
+        return result;
+    },
+
+    /**
+     * Converts param array to key/value map and keys list
+     * @param {Array} params - array of {key,value,disabled}
+     * @param {Array} arr - array to push keys into
+     * @param {Object} map - map to populate key=>value
+     */
+    toJsonObj: function(params, arr, map) {
+        for (var i = 0; i < params.length; i++) {
+            var p = params[i];
+            if (!p.disabled) {
+                arr.push(p.key);
+                map[p.key] = p.value;
+            }
+        }
+    },
+
+    type: 'SignatureUtil'
+};
+]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2025-06-07 13:53:20</sys_created_on>
+        <sys_id>0cc2bbac834ae2105a13e530ceaad3aa</sys_id>
+        <sys_mod_count>6</sys_mod_count>
+        <sys_name>SignatureUtil</sys_name>
+        <sys_package display_value="Monitoring" source="x_60748_monitoring">2a556b64830ae2105a13e530ceaad3a3</sys_package>
+        <sys_policy>read</sys_policy>
+        <sys_scope display_value="Monitoring">2a556b64830ae2105a13e530ceaad3a3</sys_scope>
+        <sys_update_name>sys_script_include_0cc2bbac834ae2105a13e530ceaad3aa</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2025-06-07 16:16:33</sys_updated_on>
+    </sys_script_include>
+    <sys_es_latest_script action="DELETE">
+        <id>0cc2bbac834ae2105a13e530ceaad3aa</id>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2025-06-07 13:53:20</sys_created_on>
+        <sys_id>4bc2ffa8834ae2105a13e530ceaad320</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2025-06-07 13:53:20</sys_updated_on>
+        <table>sys_script_include</table>
+        <use_es_latest>true</use_es_latest>
+    </sys_es_latest_script>
+    <sys_update_version action="INSERT_OR_UPDATE">
+        <action>DELETE</action>
+        <application display_value="Monitoring">2a556b64830ae2105a13e530ceaad3a3</application>
+        <file_path/>
+        <instance_id>475e258d3bb34290c55a348aa4e45a34</instance_id>
+        <instance_name>dev284896</instance_name>
+        <name>sys_script_include_0cc2bbac834ae2105a13e530ceaad3aa</name>
+        <payload>&lt;?xml version="1.0" encoding="UTF-8"?&gt;&lt;record_update table="sys_script_include"&gt;&lt;sys_script_include action="INSERT_OR_UPDATE"&gt;&lt;access&gt;public&lt;/access&gt;&lt;active&gt;true&lt;/active&gt;&lt;api_name&gt;x_60748_monitoring.SignatureUtil&lt;/api_name&gt;&lt;caller_access&gt;2&lt;/caller_access&gt;&lt;client_callable&gt;false&lt;/client_callable&gt;&lt;description/&gt;&lt;mobile_callable&gt;false&lt;/mobile_callable&gt;&lt;name&gt;SignatureUtil&lt;/name&gt;&lt;sandbox_callable&gt;false&lt;/sandbox_callable&gt;&lt;script&gt;&lt;![CDATA[var SignatureUtil = Class.create();
+SignatureUtil.prototype = {
+    initialize: function() {
+        this.cryptoUtil = new x_60748_monitoring.PureCryptoUtil();
+    },
+
+    generateTimestamp: function() {
+        return new Date().getTime();
+    },
+
+    /**
+     * Main function to generate the signature and signed URL
+     * @param {Object} request - An object representing the request info:
+     *   {
+     *     clientId: string,
+     *     secret: string,
+     *     accessToken: string (optional),
+     *     method: string (e.g. "GET"),
+     *     queryParams: Array of {key,value,disabled} objects,
+     *     body: Object containing mode and data (formdata/urlencoded/raw),
+     *     headers: Array of {key,value,disabled} objects,
+     *     urlPath: Array of strings (path segments),
+     *     urlVariables: Map of path variable substitutions {varName: value}
+     *   }
+     * @returns {Object} { signature: string, signedUrl: string, timestamp: number }
+     */
+    generateSignature: function(request) {
+        var timestamp = this.generateTimestamp();
+        var clientId = request.clientId;
+        var secret = request.secret;
+        var accessToken = request.accessToken || "";
+        var method = request.method.toUpperCase();
+        var query = request.queryParams || [];
+        var body = request.body || {};
+        var headers = request.headers || [];
+        var urlPath = request.urlPath || [];
+        var urlVariables = request.urlVariables || {};
+
+        var signMap = this.stringToSign(query, body, method, headers, urlPath, urlVariables);
+        var urlStr = signMap.url;
+        var signStr = signMap.signUrl;
+
+        var nonce = "";
+        for (var i = 0; i &lt; headers.length; i++) {
+            var h = headers[i];
+            if (h.key.toLowerCase() === "nonce" &amp;&amp; !h.disabled) {
+                nonce = h.value;
+                break;
+            }
+        }
+
+        var sign = this.calcSign(clientId, timestamp, nonce, signStr, secret);
+
+        return {
+            signature: sign,
+            signedUrl: urlStr,
+            timestamp: timestamp
+        };
+    },
+
+    /**
+     * Calculates the HMAC-SHA256 signature using PureCryptoUtil
+     */
+    calcSign: function(clientId, timestamp, nonce, signStr, secret) {
+        var strToSign = clientId + timestamp + nonce + signStr;
+        // Using PureCryptoUtil for HMAC-SHA256, output uppercase hex string
+        var hmac = this.cryptoUtil.hmacSha256(secret, strToSign);
+        return hmac.toUpperCase();
+    },
+
+    /**
+     * Builds the string to sign and URL based on request parts
+     */
+    stringToSign: function(query, body, method, headers, urlPath, urlVariables) {
+        var url = "";
+        var headersStr = "";
+        var map = {};
+        var arr = [];
+        var bodyStr = "";
+
+        if (query &amp;&amp; query.length &gt; 0) {
+            this.toJsonObj(query, arr, map);
+        }
+
+        if (body &amp;&amp; body.mode) {
+            if (body.mode !== "formdata" &amp;&amp; body.mode !== "urlencoded") {
+                bodyStr = this.replaceParams(body.raw || "");
+            } else if (body.mode === "formdata" || body.mode === "urlencoded") {
+                this.toJsonObj(body[body.mode] || [], arr, map);
+            }
+        }
+
+        var sha256Body = this.cryptoUtil.sha256(bodyStr);
+
+        arr.sort();
+        for (var i = 0; i &lt; arr.length; i++) {
+            var key = arr[i];
+            url += key + "=" + map[key] + "&amp;";
+        }
+        if (url.length &gt; 0) {
+            url = url.slice(0, -1); // remove last &amp;
+            url = "/" + urlPath.join("/") + "?" + url;
+        } else {
+            url = "/" + urlPath.join("/");
+        }
+
+        // Signature-Headers processing
+        var sigHeadersVal = "";
+        for (var j = 0; j &lt; headers.length; j++) {
+            if (headers[j].key.toLowerCase() === "signature-headers" &amp;&amp; !headers[j].disabled) {
+                sigHeadersVal = headers[j].value;
+                break;
+            }
+        }
+        if (sigHeadersVal) {
+            var signHeaderKeys = sigHeadersVal.split(":");
+            for (var k = 0; k &lt; signHeaderKeys.length; k++) {
+                var key = signHeaderKeys[k];
+                var val = "";
+                if (this.isSelected(headers, key)) {
+                    for (var hIdx = 0; hIdx &lt; headers.length; hIdx++) {
+                        var hItem = headers[hIdx];
+                        if (hItem.key === key &amp;&amp; !hItem.disabled) {
+                            val = hItem.value;
+                            break;
+                        }
+                    }
+                }
+                headersStr += key + ":" + val + "\n";
+            }
+        }
+
+        url = this.replaceUrlParams(url, urlVariables);
+
+        var signUrl = method + "\n" + sha256Body + "\n" + headersStr + "\n" + url;
+
+        return {
+            signUrl: signUrl,
+            url: url
+        };
+    },
+
+    /**
+     * Check if header is selected (not disabled)
+     */
+    isSelected: function(headers, key) {
+        for (var i = 0; i &lt; headers.length; i++) {
+            if (headers[i].key === key &amp;&amp; headers[i].disabled) {
+                return false;
+            }
+        }
+        return true;
+    },
+
+    /**
+     * Replace params in string like {{param}} with environment values
+     * Here simplified: you can implement your own env lookup or pass map
+     */
+    replaceParams: function(str) {
+        // Implement your param replace logic here if needed
+        // For example, no environment in SN so just return str as is
+        return str;
+    },
+
+    /**
+     * Replace URL variables like :id with values from urlVariables map
+     */
+    replaceUrlParams: function(url, urlVariables) {
+        if (!urlVariables) return url;
+
+        // Replace {{var}} syntax
+        var result = url;
+        var pattern = /\{\{([^}]+)\}\}/g;
+        result = result.replace(pattern, function(match, p1) {
+            return urlVariables[p1] || "";
+        });
+
+        // Replace :var syntax
+        var colonPattern = /:([^\/\?]+)/g;
+        result = result.replace(colonPattern, function(match, p1) {
+            return urlVariables[p1] || "";
+        });
+
+        return result;
+    },
+
+    /**
+     * Converts param array to key/value map and keys list
+     * @param {Array} params - array of {key,value,disabled}
+     * @param {Array} arr - array to push keys into
+     * @param {Object} map - map to populate key=&gt;value
+     */
+    toJsonObj: function(params, arr, map) {
+        for (var i = 0; i &lt; params.length; i++) {
+            var p = params[i];
+            if (!p.disabled) {
+                arr.push(p.key);
+                map[p.key] = p.value;
+            }
+        }
+    },
+
+    type: 'SignatureUtil'
+};
+]]&gt;&lt;/script&gt;&lt;sys_class_name&gt;sys_script_include&lt;/sys_class_name&gt;&lt;sys_created_by&gt;admin&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2025-06-07 13:53:20&lt;/sys_created_on&gt;&lt;sys_id&gt;0cc2bbac834ae2105a13e530ceaad3aa&lt;/sys_id&gt;&lt;sys_mod_count&gt;6&lt;/sys_mod_count&gt;&lt;sys_name&gt;SignatureUtil&lt;/sys_name&gt;&lt;sys_package display_value="Monitoring" source="x_60748_monitoring"&gt;2a556b64830ae2105a13e530ceaad3a3&lt;/sys_package&gt;&lt;sys_policy&gt;read&lt;/sys_policy&gt;&lt;sys_scope display_value="Monitoring"&gt;2a556b64830ae2105a13e530ceaad3a3&lt;/sys_scope&gt;&lt;sys_update_name&gt;sys_script_include_0cc2bbac834ae2105a13e530ceaad3aa&lt;/sys_update_name&gt;&lt;sys_updated_by&gt;admin&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2025-06-07 16:16:33&lt;/sys_updated_on&gt;&lt;/sys_script_include&gt;&lt;sys_es_latest_script action="INSERT_OR_UPDATE"&gt;&lt;id&gt;0cc2bbac834ae2105a13e530ceaad3aa&lt;/id&gt;&lt;sys_created_by&gt;admin&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2025-06-07 13:53:20&lt;/sys_created_on&gt;&lt;sys_id&gt;4bc2ffa8834ae2105a13e530ceaad320&lt;/sys_id&gt;&lt;sys_mod_count&gt;0&lt;/sys_mod_count&gt;&lt;sys_updated_by&gt;admin&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2025-06-07 13:53:20&lt;/sys_updated_on&gt;&lt;table&gt;sys_script_include&lt;/table&gt;&lt;use_es_latest&gt;true&lt;/use_es_latest&gt;&lt;/sys_es_latest_script&gt;&lt;/record_update&gt;</payload>
+        <payload_hash>-464504605</payload_hash>
+        <record_name>SignatureUtil</record_name>
+        <reverted_from/>
+        <source>6255abe4830ae2105a13e530ceaad380</source>
+        <source_table>sys_update_set</source_table>
+        <state>previous</state>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2025-06-07 16:16:33</sys_created_on>
+        <sys_id>c9935cb8830ee2105a13e530ceaad339</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_recorded_at>1974b2df9df0000001</sys_recorded_at>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2025-06-07 16:16:33</sys_updated_on>
+        <type>Script Include</type>
+        <update_guid>41935cb8470ee2107f8c8f20de939c39</update_guid>
+        <update_guid_history>41935cb8470ee2107f8c8f20de939c39:-464504605,9d739078c00ee2107cd465b4217b2d78:897981252,09f290f4a30ee210c15f8e0d125800c3:1020020417,74bff3ec268ae210a2d819d6f2181660:1290693232,a43e73ac6e8ae21051bc5587063f2a0e:2095067671,3a0eff6cb18ae210c5a265b10a52a826:261477050,97c2fbacff4ae21043fd81f0acd775fb:1290693232</update_guid_history>
+    </sys_update_version>
+    <sys_metadata_delete action="INSERT_OR_UPDATE">
+        <sys_audit_delete/>
+        <sys_class_name>sys_metadata_delete</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2025-06-07 17:42:29</sys_created_on>
+        <sys_db_object display_value="" name="sys_script_include">sys_script_include</sys_db_object>
+        <sys_id>3963de107e834520942a376f9f80bb90</sys_id>
+        <sys_metadata>0cc2bbac834ae2105a13e530ceaad3aa</sys_metadata>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>SignatureUtil</sys_name>
+        <sys_package display_value="Monitoring" source="x_60748_monitoring">2a556b64830ae2105a13e530ceaad3a3</sys_package>
+        <sys_parent/>
+        <sys_policy>read</sys_policy>
+        <sys_scope display_value="Monitoring">2a556b64830ae2105a13e530ceaad3a3</sys_scope>
+        <sys_scope_delete display_value="">b32b355125ec4107bc995236935103a1</sys_scope_delete>
+        <sys_update_name>sys_script_include_0cc2bbac834ae2105a13e530ceaad3aa</sys_update_name>
+        <sys_update_version display_value="sys_script_include_0cc2bbac834ae2105a13e530ceaad3aa">c9935cb8830ee2105a13e530ceaad339</sys_update_version>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2025-06-07 17:42:29</sys_updated_on>
+    </sys_metadata_delete>
+</record_update>

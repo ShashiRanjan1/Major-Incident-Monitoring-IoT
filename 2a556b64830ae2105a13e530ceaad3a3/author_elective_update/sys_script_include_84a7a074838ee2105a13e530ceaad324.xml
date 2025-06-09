@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
+    <sys_script_include action="DELETE">
+        <access>public</access>
+        <active>true</active>
+        <api_name>x_60748_monitoring.MySignatureUtil</api_name>
+        <caller_access/>
+        <client_callable>false</client_callable>
+        <description/>
+        <mobile_callable>false</mobile_callable>
+        <name>MySignatureUtil</name>
+        <sandbox_callable>false</sandbox_callable>
+        <script><![CDATA[var MySignatureUtil = Class.create();
+MySignatureUtil.prototype = {
+    initialize: function() {
+        var crypto = new x_60748_monitoring.pureCryptoUtil(); // Use your working pureCryptoUtil here
+    },
+
+    /**
+     * Generate HMAC-SHA256 signature using your working pureCryptoUtil
+     * 
+     * @param {String} clientId - API client ID
+     * @param {String} secret - API secret key
+     * @param {String} timestamp - Unix timestamp in ms
+     * @param {String} nonce - Random UUID/nonce
+     * @param {String} method - HTTP method (GET/POST)
+     * @param {String} pathWithQuery - e.g. /v1.0/token?grant_type=1
+     * @param {String} sha256Body - SHA256 hash of body (hex string, e.g. for empty body)
+     * @param {String} signatureHeaders - Canonical header string (optional, formatted like `Header:Value\n`)
+     * @returns {String} Signature in UPPERCASE HEX
+     */
+    generateSignature: function(clientId, secret, timestamp, nonce, method, pathWithQuery, sha256Body, signatureHeaders) {
+        // Construct the string to sign exactly like CryptoJS in Postman
+        var signingStr = method.toUpperCase() + '\n' +
+                         sha256Body + '\n' +
+                         (signatureHeaders || '') + '\n' +
+                         pathWithQuery;
+
+        var fullStringToSign = clientId + timestamp + nonce + signingStr;
+
+        // Use your working pureCryptoUtil for HMAC
+        var signature = crypto.hmacSha256(fullStringToSign, secret);
+
+        return signature.toUpperCase();
+    },
+
+    type: 'MySignatureUtil'
+};
+]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2025-06-07 17:44:37</sys_created_on>
+        <sys_id>84a7a074838ee2105a13e530ceaad324</sys_id>
+        <sys_mod_count>1</sys_mod_count>
+        <sys_name>MySignatureUtil</sys_name>
+        <sys_package display_value="Monitoring" source="x_60748_monitoring">2a556b64830ae2105a13e530ceaad3a3</sys_package>
+        <sys_policy>read</sys_policy>
+        <sys_scope display_value="Monitoring">2a556b64830ae2105a13e530ceaad3a3</sys_scope>
+        <sys_update_name>sys_script_include_84a7a074838ee2105a13e530ceaad324</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2025-06-07 17:46:00</sys_updated_on>
+    </sys_script_include>
+    <sys_es_latest_script action="DELETE">
+        <id>84a7a074838ee2105a13e530ceaad324</id>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2025-06-07 17:44:37</sys_created_on>
+        <sys_id>0bb7a474838ee2105a13e530ceaad305</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2025-06-07 17:44:37</sys_updated_on>
+        <table>sys_script_include</table>
+        <use_es_latest>true</use_es_latest>
+    </sys_es_latest_script>
+    <sys_update_version action="INSERT_OR_UPDATE">
+        <action>DELETE</action>
+        <application display_value="Monitoring">2a556b64830ae2105a13e530ceaad3a3</application>
+        <file_path/>
+        <instance_id>475e258d3bb34290c55a348aa4e45a34</instance_id>
+        <instance_name>dev284896</instance_name>
+        <name>sys_script_include_84a7a074838ee2105a13e530ceaad324</name>
+        <payload>&lt;?xml version="1.0" encoding="UTF-8"?&gt;&lt;record_update table="sys_script_include"&gt;&lt;sys_script_include action="INSERT_OR_UPDATE"&gt;&lt;access&gt;public&lt;/access&gt;&lt;active&gt;true&lt;/active&gt;&lt;api_name&gt;x_60748_monitoring.MySignatureUtil&lt;/api_name&gt;&lt;caller_access/&gt;&lt;client_callable&gt;false&lt;/client_callable&gt;&lt;description/&gt;&lt;mobile_callable&gt;false&lt;/mobile_callable&gt;&lt;name&gt;MySignatureUtil&lt;/name&gt;&lt;sandbox_callable&gt;false&lt;/sandbox_callable&gt;&lt;script&gt;&lt;![CDATA[var MySignatureUtil = Class.create();
+MySignatureUtil.prototype = {
+    initialize: function() {
+        var crypto = new x_60748_monitoring.pureCryptoUtil(); // Use your working pureCryptoUtil here
+    },
+
+    /**
+     * Generate HMAC-SHA256 signature using your working pureCryptoUtil
+     * 
+     * @param {String} clientId - API client ID
+     * @param {String} secret - API secret key
+     * @param {String} timestamp - Unix timestamp in ms
+     * @param {String} nonce - Random UUID/nonce
+     * @param {String} method - HTTP method (GET/POST)
+     * @param {String} pathWithQuery - e.g. /v1.0/token?grant_type=1
+     * @param {String} sha256Body - SHA256 hash of body (hex string, e.g. for empty body)
+     * @param {String} signatureHeaders - Canonical header string (optional, formatted like `Header:Value\n`)
+     * @returns {String} Signature in UPPERCASE HEX
+     */
+    generateSignature: function(clientId, secret, timestamp, nonce, method, pathWithQuery, sha256Body, signatureHeaders) {
+        // Construct the string to sign exactly like CryptoJS in Postman
+        var signingStr = method.toUpperCase() + '\n' +
+                         sha256Body + '\n' +
+                         (signatureHeaders || '') + '\n' +
+                         pathWithQuery;
+
+        var fullStringToSign = clientId + timestamp + nonce + signingStr;
+
+        // Use your working pureCryptoUtil for HMAC
+        var signature = crypto.hmacSha256(fullStringToSign, secret);
+
+        return signature.toUpperCase();
+    },
+
+    type: 'MySignatureUtil'
+};
+]]&gt;&lt;/script&gt;&lt;sys_class_name&gt;sys_script_include&lt;/sys_class_name&gt;&lt;sys_created_by&gt;admin&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2025-06-07 17:44:37&lt;/sys_created_on&gt;&lt;sys_id&gt;84a7a074838ee2105a13e530ceaad324&lt;/sys_id&gt;&lt;sys_mod_count&gt;1&lt;/sys_mod_count&gt;&lt;sys_name&gt;MySignatureUtil&lt;/sys_name&gt;&lt;sys_package display_value="Monitoring" source="x_60748_monitoring"&gt;2a556b64830ae2105a13e530ceaad3a3&lt;/sys_package&gt;&lt;sys_policy&gt;read&lt;/sys_policy&gt;&lt;sys_scope display_value="Monitoring"&gt;2a556b64830ae2105a13e530ceaad3a3&lt;/sys_scope&gt;&lt;sys_update_name&gt;sys_script_include_84a7a074838ee2105a13e530ceaad324&lt;/sys_update_name&gt;&lt;sys_updated_by&gt;admin&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2025-06-07 17:46:00&lt;/sys_updated_on&gt;&lt;/sys_script_include&gt;&lt;sys_es_latest_script action="INSERT_OR_UPDATE"&gt;&lt;id&gt;84a7a074838ee2105a13e530ceaad324&lt;/id&gt;&lt;sys_created_by&gt;admin&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2025-06-07 17:44:37&lt;/sys_created_on&gt;&lt;sys_id&gt;0bb7a474838ee2105a13e530ceaad305&lt;/sys_id&gt;&lt;sys_mod_count&gt;0&lt;/sys_mod_count&gt;&lt;sys_updated_by&gt;admin&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2025-06-07 17:44:37&lt;/sys_updated_on&gt;&lt;table&gt;sys_script_include&lt;/table&gt;&lt;use_es_latest&gt;true&lt;/use_es_latest&gt;&lt;/sys_es_latest_script&gt;&lt;/record_update&gt;</payload>
+        <payload_hash>-1214956549</payload_hash>
+        <record_name>MySignatureUtil</record_name>
+        <reverted_from/>
+        <source>6255abe4830ae2105a13e530ceaad380</source>
+        <source_table>sys_update_set</source_table>
+        <state>previous</state>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2025-06-07 17:46:00</sys_created_on>
+        <sys_id>1f08e0b4838ee2105a13e530ceaad350</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_recorded_at>1974b7fdeb80000001</sys_recorded_at>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2025-06-07 17:46:00</sys_updated_on>
+        <type>Script Include</type>
+        <update_guid>d308e0b4748ee21059a6d5b998802250</update_guid>
+        <update_guid_history>d308e0b4748ee21059a6d5b998802250:-1214956549,4bb72c74e28ee210eecc03324ffcfa82:1020744108</update_guid_history>
+    </sys_update_version>
+    <sys_metadata_delete action="INSERT_OR_UPDATE">
+        <sys_audit_delete/>
+        <sys_class_name>sys_metadata_delete</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2025-06-07 17:50:50</sys_created_on>
+        <sys_db_object display_value="" name="sys_script_include">sys_script_include</sys_db_object>
+        <sys_id>1ad6f8f167c640d589ddce1e4f7e4781</sys_id>
+        <sys_metadata>84a7a074838ee2105a13e530ceaad324</sys_metadata>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>MySignatureUtil</sys_name>
+        <sys_package display_value="Monitoring" source="x_60748_monitoring">2a556b64830ae2105a13e530ceaad3a3</sys_package>
+        <sys_parent/>
+        <sys_policy>read</sys_policy>
+        <sys_scope display_value="Monitoring">2a556b64830ae2105a13e530ceaad3a3</sys_scope>
+        <sys_scope_delete display_value="">b32b355125ec4107bc995236935103a1</sys_scope_delete>
+        <sys_update_name>sys_script_include_84a7a074838ee2105a13e530ceaad324</sys_update_name>
+        <sys_update_version display_value="sys_script_include_84a7a074838ee2105a13e530ceaad324">1f08e0b4838ee2105a13e530ceaad350</sys_update_version>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2025-06-07 17:50:50</sys_updated_on>
+    </sys_metadata_delete>
+</record_update>

@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>public</access>
+        <active>true</active>
+        <api_name>x_60748_monitoring.httpCallTuya</api_name>
+        <caller_access/>
+        <client_callable>false</client_callable>
+        <description/>
+        <mobile_callable>false</mobile_callable>
+        <name>httpCallTuya</name>
+        <sandbox_callable>false</sandbox_callable>
+        <script><![CDATA[var httpCallTuya = Class.create();
+httpCallTuya.prototype = {
+    initialize: function() {},
+
+    getToken: function() {
+        var clientId = "qs45p9dxjyxvqeg9r7n7";
+        var secret = "dc181cd3047540c9b3c44c6074eb7b1a";
+        var method = "GET";
+        var pathWithQuery = "/v1.0/token?grant_type=1";
+        var timestamp = new Date().getTime();
+
+        var sigUtil = new x_60748_monitoring.MySignatureUtil();
+        var signature = sigUtil.generateSignature(clientId, secret, method, pathWithQuery, timestamp);
+
+        // Setup REST message
+        var r = new sn_ws.RESTMessageV2();
+        r.setHttpMethod(method);
+        r.setEndpoint('https://openapi.tuyaeu.com/v1.0/token?grant_type=1');
+
+        // Set required headers
+        r.setRequestHeader('client_id', clientId);
+        r.setRequestHeader('t', timestamp);
+        r.setRequestHeader('nonce', '');
+        r.setRequestHeader('sign', signature);
+        r.setRequestHeader('sign_method', 'HMAC-SHA256');
+
+        // Execute the request
+        var response = r.execute();
+        var responseBody = response.getBody();
+        var httpStatus = response.getStatusCode();
+        return responseBody;
+        // return JSON.parse(responseBody).result.access_token;
+    },
+
+    commandCall: function(body) {
+        var clientId = "qs45p9dxjyxvqeg9r7n7";
+        var secret = "dc181cd3047540c9b3c44c6074eb7b1a";
+        var method = "POST";
+        var accessToken = "d03f7d2d3b540dd635ae6af191fb41ca";
+        var pathWithQuery = "/v1.0/devices/bfe5ea90d59b7e8479rnza/commands";
+        var timestamp = new Date().getTime();
+
+        var sigUtil = new x_60748_monitoring.MySignatureUtil();
+        var signature = sigUtil.generateSignature2(clientId, accessToken, secret, method, pathWithQuery, timestamp, body);
+
+        // Setup REST message
+        var r = new sn_ws.RESTMessageV2();
+        r.setHttpMethod(method);
+        r.setEndpoint('https://openapi.tuyaeu.com/v1.0/devices/bfe5ea90d59b7e8479rnza/commands');
+
+        // Set required headers
+        r.setRequestHeader('client_id', clientId);
+        r.setRequestHeader('t', timestamp);
+        r.setRequestHeader('nonce', '');
+        r.setRequestHeader('sign', signature);
+        r.setRequestHeader('access_token', accessToken);
+        r.setRequestHeader('sign_method', 'HMAC-SHA256');
+        r.setRequestHeader('Content-Type', 'application/json');
+        r.setRequestBody(body);
+        // Execute the request
+        var response = r.execute();
+        var responseBody = response.getBody();
+        var httpStatus = response.getStatusCode();
+
+        // Log response
+        gs.info('HTTP Status: ' + httpStatus);
+        gs.info('Response Body: ' + responseBody);
+        return responseBody;
+    },
+
+
+    type: 'httpCallTuya'
+};]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2025-06-07 17:54:47</sys_created_on>
+        <sys_id>43f92838838ee2105a13e530ceaad3d5</sys_id>
+        <sys_mod_count>5</sys_mod_count>
+        <sys_name>httpCallTuya</sys_name>
+        <sys_package display_value="Monitoring" source="x_60748_monitoring">2a556b64830ae2105a13e530ceaad3a3</sys_package>
+        <sys_policy>read</sys_policy>
+        <sys_scope display_value="Monitoring">2a556b64830ae2105a13e530ceaad3a3</sys_scope>
+        <sys_update_name>sys_script_include_43f92838838ee2105a13e530ceaad3d5</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2025-06-07 20:54:40</sys_updated_on>
+    </sys_script_include>
+    <sys_es_latest_script action="INSERT_OR_UPDATE">
+        <id>43f92838838ee2105a13e530ceaad3d5</id>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2025-06-07 17:54:47</sys_created_on>
+        <sys_id>370ae0b4838ee2105a13e530ceaad3fb</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2025-06-07 17:54:47</sys_updated_on>
+        <table>sys_script_include</table>
+        <use_es_latest>true</use_es_latest>
+    </sys_es_latest_script>
+</record_update>
